@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>post</title>
+</head>
+<style>
+body
+{
+ text-align: left;
+ background: url("http://imgur.com/Dsm8lJt.jpg");
+ background-size:cover;
+ background-position: up;
+ color: black;
+ font-family: red serifs;
+ font-size:20px;
+ }
+
+</style>
+<body>
+
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+       <h1>Posting an image</h1>
+      {{ form }}
+        <input type="submit" class="btn btn-default" value="Add a picture">
+
+    </form>
+</body>
+</html>
