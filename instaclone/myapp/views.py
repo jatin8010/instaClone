@@ -4,6 +4,7 @@ from models import User, SessionToken, PostModel, LikeModel, CommentModel
 from django.contrib.auth.hashers import make_password, check_password
 from datetime import timedelta
 from django.utils import timezone
+from django.contrib.auth import logout
 from instaclone.settings import BASE_DIR
 
 
@@ -133,6 +134,15 @@ def comment_view(request):
     else:
         return redirect('/login')
 
+def logout_view(request):
+    user = check_validation(request)
+    if user is not None:
+        latest_sessn = SessionToken.objects.filter(user=user).last()
+        if latest_sessn:
+            latest_sessn.delete()
+            return redirect("/login/")
+        else:
+            return redirect('/feeds/')
 
 # For validating the session
 def check_validation(request):
