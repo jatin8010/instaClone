@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect
 from forms import SignUpForm, LoginForm, PostForm, LikeForm, CommentForm
-from models import User, SessionToken, PostModel, LikeModel, CommentModel
+from models import User, SessionToken, PostModel, LikeModel, CommentModel, BrandModel, PointsModel
 from django.contrib.auth.hashers import make_password, check_password
 from datetime import timedelta
 from django.utils import timezone
 from django.contrib.auth import logout
+from clarifai.rest import ClarifaiApp
 from instaclone.settings import BASE_DIR
 
 
@@ -155,5 +156,61 @@ def check_validation(request):
     else:
         return None
 
+def win_points(user, image_url, caption):
+    brands_in_caption = 0
+    brand_selected = ""
+    points = 0;
+    brands = BrandModel.objects.all()
 
+    for brand in brands:
+        if caption.__contains__(brand.name):
+            brand_selected = brand.name
+            brands_in_caption += 1
+    image_caption = verify_image(image_url)
+    if brands_in_caption == 1:
+        points += 50
+        if image_caption.__contains__(brand_selected):
+            points += 50
+    else:
+        if image_caption != "":
+            if BrandModel.objects.filter(name=image_caption):
+                points += 50
+    if points >= 50:
+        brand = BrandModel.objects.filter(name=brand_selected).first()
+        PointsModel.objects.create(user=user, brand=brand)
+        return "Post Added with 1 points"
+    else:
+        return "Post Added"
+
+def verify_image(image_url):
+    app = ClarifaiApp(api_key="d9cdd283a5754aef87ed239a4b47b876")
+    model = app.models.get("logo")
+    responce = model.predict_by_url(url=image_url)
+    if responce["status"]["code"] == 10000:
+        if responce["outputs"][0]["data"]:
+            return responce["outputs"][0]["data"]["regions"][0]["data"]["concepts"][0]["name"].lower()
+    return ""
+
+def points_view(request):
+    user = check_validation(request)
+    if user:
+
+        points_model = PointsModel.objects.filter(user=user).order_by('-created_on')
+        points_model.total_points = len(PointsModel.objects.filter(user=user))
+        brands = BrandModel.objects.all()
+        return render(request, 'points.html', {'points_model': points_model, 'brands': brands, 'user': user})
+    else:
+        return redirect('/login/')
+
+def self_view(request):
+    user = check_validation(request)
+    if user:
+        posts = PostModel.objects.filter(user=user).order_by('-created_on')
+        for post in posts:
+            existing_like = LikeModel.objects.filter(post_id=post.id, user=user).first()
+            if existing_like:
+                post.has_liked = True
+        return render(request, 'feed.html', {'posts': posts, 'user': user})
+    else:
+        return redirect('/login/')
 
